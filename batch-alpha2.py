@@ -113,9 +113,7 @@ APPEND_STRING = ""  # Suffix string to append to the generated caption
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
 INPUT_FOLDER = SCRIPT_DIR / "input"
-# OUTPUT_FOLDER = INPUT_FOLDER
-# batch-alpha2.pyの中で、OUTPUT_FOLDERの定義を変更
-OUTPUT_FOLDER = Path(args.input_path) if args.input_path else INPUT_FOLDER
+OUTPUT_FOLDER = input-path
 
 
 # LLM Settings
