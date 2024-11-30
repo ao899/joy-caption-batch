@@ -14,7 +14,6 @@ from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-
 from transformers import (
     AutoTokenizer,
     LlavaForConditionalGeneration,
@@ -329,7 +328,12 @@ def main():
     assert isinstance(tokenizer, PreTrainedTokenizer) or isinstance(
         tokenizer, PreTrainedTokenizerFast
     ), f"Tokenizer is of type {type(tokenizer)}"
-    
+        # モデルロード部分
+    quantization_config = BitsAndBytesConfig(
+        load_in_8bit=True,
+        llm_int8_threshold=6.0,
+        bnb_4bit_compute_dtype=torch.float16
+    )
     llava_model = LlavaForConditionalGeneration.from_pretrained(
         args.model, torch_dtype="bfloat16", device_map="auto"
     )
