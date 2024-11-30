@@ -328,8 +328,7 @@ llava_model = LlavaForConditionalGeneration.from_pretrained(
     quantization_config=quantization_config,
     torch_dtype=torch.float32  # float16からfloat32に変更
 )
-
-    assert isinstance(llava_model, LlavaForConditionalGeneration)
+assert isinstance(llava_model, LlavaForConditionalGeneration)
 
     # Log image_seq_length for debugging
     logging.debug(f"Image sequence length: {args.image_seq_length}")
