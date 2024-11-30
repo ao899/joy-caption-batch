@@ -350,74 +350,74 @@ dataloader = DataLoader(
         shuffle=False,
         drop_last=False,
         batch_size=batch_processing_count,
+)
+end_of_header_id = tokenizer.convert_tokens_to_ids("<|end_header_id|>")
+end_of_turn_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
+assert isinstance(end_of_header_id, int) and isinstance(end_of_turn_id, int)
+
+pbar = tqdm(
+total=len(image_paths), desc="Captioning images...", dynamic_ncols=True
+)
+for batch in dataloader:
+vision_dtype = (
+    llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.dtype
+)
+vision_device = (
+    llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.device
+)
+language_device = (
+    llava_model.language_model.get_input_embeddings().weight.device
+)
+
+# Move to GPU
+pixel_values = batch["pixel_values"].to(vision_device, non_blocking=True)
+input_ids = batch["input_ids"].to(language_device, non_blocking=True)
+attention_mask = batch["attention_mask"].to(language_device, non_blocking=True)
+
+# Normalize the image
+pixel_values = pixel_values / 255.0
+pixel_values = TVF.normalize(pixel_values, [0.5], [0.5])
+pixel_values = pixel_values.to(vision_dtype)
+
+# Generate the captions
+try:
+    generate_ids = llava_model.generate(
+        input_ids=input_ids,
+        pixel_values=pixel_values,
+        attention_mask=attention_mask,
+        max_new_tokens=args.max_new_tokens,
+        do_sample=not args.greedy,
+        suppress_tokens=None,
+        use_cache=True,
+        temperature=args.temperature,
+        top_k=args.top_k,
+        top_p=args.top_p,
     )
-    end_of_header_id = tokenizer.convert_tokens_to_ids("<|end_header_id|>")
-    end_of_turn_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
-    assert isinstance(end_of_header_id, int) and isinstance(end_of_turn_id, int)
+except Exception as e:
+    logging.error(f"Generation failed: {e}")
+    pbar.update(len(batch["paths"]))
+    continue
 
-    pbar = tqdm(
-        total=len(image_paths), desc="Captioning images...", dynamic_ncols=True
-    )
-    for batch in dataloader:
-        vision_dtype = (
-            llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.dtype
-        )
-        vision_device = (
-            llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.device
-        )
-        language_device = (
-            llava_model.language_model.get_input_embeddings().weight.device
-        )
+# Trim off the prompts
+assert isinstance(generate_ids, torch.Tensor)
+generate_ids = generate_ids.tolist()
+generate_ids = [
+    trim_off_prompt(ids, end_of_header_id, end_of_turn_id)
+    for ids in generate_ids
+]
 
-        # Move to GPU
-        pixel_values = batch["pixel_values"].to(vision_device, non_blocking=True)
-        input_ids = batch["input_ids"].to(language_device, non_blocking=True)
-        attention_mask = batch["attention_mask"].to(language_device, non_blocking=True)
+# Decode the captions
+captions = tokenizer.batch_decode(
+    generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
+)
+captions = [c.strip() for c in captions]
 
-        # Normalize the image
-        pixel_values = pixel_values / 255.0
-        pixel_values = TVF.normalize(pixel_values, [0.5], [0.5])
-        pixel_values = pixel_values.to(vision_dtype)
+for path, caption in zip(batch["paths"], captions):
+    write_caption(Path(path), caption, args)
 
-        # Generate the captions
-        try:
-            generate_ids = llava_model.generate(
-                input_ids=input_ids,
-                pixel_values=pixel_values,
-                attention_mask=attention_mask,
-                max_new_tokens=args.max_new_tokens,
-                do_sample=not args.greedy,
-                suppress_tokens=None,
-                use_cache=True,
-                temperature=args.temperature,
-                top_k=args.top_k,
-                top_p=args.top_p,
-            )
-        except Exception as e:
-            logging.error(f"Generation failed: {e}")
-            pbar.update(len(batch["paths"]))
-            continue
-
-        # Trim off the prompts
-        assert isinstance(generate_ids, torch.Tensor)
-        generate_ids = generate_ids.tolist()
-        generate_ids = [
-            trim_off_prompt(ids, end_of_header_id, end_of_turn_id)
-            for ids in generate_ids
-        ]
-
-        # Decode the captions
-        captions = tokenizer.batch_decode(
-            generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
-        )
-        captions = [c.strip() for c in captions]
-
-        for path, caption in zip(batch["paths"], captions):
-            write_caption(Path(path), caption, args)
-
-        pbar.update(len(captions))
-    pbar.close()
-    logging.info("Captioning completed.")
+pbar.update(len(captions))
+pbar.close()
+logging.info("Captioning completed.")
 
 
 def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]:
