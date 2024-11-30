@@ -287,11 +287,11 @@ def main():
     global OUTPUT_FOLDER
     if args.input_path:
         OUTPUT_FOLDER = Path(args.input_path)
-        def write_caption(image_path: Path, caption: str, args):
+def write_caption(image_path: Path, caption: str, args):
     # OUTPUT_FOLDERを使用して出力パスを設定
     caption_path = OUTPUT_FOLDER / image_path.name
     caption_path = caption_path.with_suffix(".txt")
-    
+
     # Apply PREPEND_STRING and APPEND_STRING
     caption = f"{args.prepend_string}{caption}{args.append_string}"
 
@@ -317,6 +317,7 @@ def main():
             print(f"Caption written to '{caption_path}'")
     except Exception as e:
         logging.error(f"Failed to write caption to '{caption_path}': {e}")
+
         
     # If no image sources are provided, default to using the input folder
     use_default_input = not image_sources_provided
