@@ -336,14 +336,14 @@ logging.debug(f"Image sequence length: {args.image_seq_length}")
     # Use args.batch_processing_count or BATCH_PROCESSING_COUNT
 batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
 
-    dataset = ImageDataset(
+dataset = ImageDataset(
         prompts,
         image_paths,
         tokenizer,
         llava_model.config.image_token_index,
         args.image_seq_length,  # Use the provided image_seq_length
     )
-    dataloader = DataLoader(
+dataloader = DataLoader(
         dataset,
         collate_fn=dataset.collate_fn,
         num_workers=args.num_workers,
