@@ -335,7 +335,10 @@ def main():
         bnb_4bit_compute_dtype=torch.float16
     )
     llava_model = LlavaForConditionalGeneration.from_pretrained(
-        args.model, torch_dtype="bfloat16", device_map="auto"
+        args.model,
+        device_map="auto",
+        quantization_config=quantization_config,
+        torch_dtype=torch.float16
     )
     assert isinstance(llava_model, LlavaForConditionalGeneration)
 
