@@ -20,21 +20,23 @@ from transformers import (
     LlavaForConditionalGeneration,
     PreTrainedTokenizer,
     PreTrainedTokenizerFast,
+    BitsAndBytesConfig
 )
 
 # モデルロード部分を修正
-from transformers import BitsAndBytesConfig
-
 quantization_config = BitsAndBytesConfig(
     load_in_8bit=True,
-    llm_int8_threshold=6.0
+    llm_int8_threshold=6.0,
+    bnb_4bit_compute_dtype=torch.float16  # 追加：計算精度の指定
 )
 
 llava_model = LlavaForConditionalGeneration.from_pretrained(
     args.model,
     device_map="auto",
-    quantization_config=quantization_config
+    quantization_config=quantization_config,
+    torch_dtype=torch.float16  # 追加：モデルの基本データ型を指定
 )
+
 
 def none_or_type(value, desired_type):
     if value == "None":
