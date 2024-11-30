@@ -246,29 +246,6 @@ class Prompt:
     prompt: str
     weight: float
 
-def find_images(
-    glob: str | None,
-    filelist: str | Path | None,
-    input_folder_flag: bool,
-    use_default_input: bool,
-    input_path: str | None,  # 新しいパラメータ
-) -> list[Path]:
-    paths = []
-    
-    # 直接パスが指定された場合の処理を追加
-    if input_path:
-        input_path_obj = Path(input_path)
-        if not input_path_obj.exists():
-            logging.error(f"Input path '{input_path}' does not exist.")
-        elif not input_path_obj.is_dir():
-            logging.error(f"Input path '{input_path}' is not a directory.")
-        else:
-            input_images = [
-                p for p in input_path_obj.iterdir() 
-                if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            ]
-            logging.info(f"Found {len(input_images)} images in '{input_path}'")
-            paths.extend(input_images)
 
 @torch.no_grad()
 def main():
@@ -653,8 +630,24 @@ def find_images(
     filelist: str | Path | None,
     input_folder_flag: bool,
     use_default_input: bool,
+    input_path: str | None,  # 新しいパラメータ
 ) -> list[Path]:
     paths = []
+    
+    # 直接パスが指定された場合の処理を追加
+    if input_path:
+        input_path_obj = Path(input_path)
+        if not input_path_obj.exists():
+            logging.error(f"Input path '{input_path}' does not exist.")
+        elif not input_path_obj.is_dir():
+            logging.error(f"Input path '{input_path}' is not a directory.")
+        else:
+            input_images = [
+                p for p in input_path_obj.iterdir() 
+                if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+            ]
+            logging.info(f"Found {len(input_images)} images in '{input_path}'")
+            paths.extend(input_images)
 
     if glob:
         glob_paths = list(Path(".").glob(glob))
