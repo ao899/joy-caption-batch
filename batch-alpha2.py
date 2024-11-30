@@ -127,6 +127,12 @@ parser.add_argument(
     help="File containing list of image paths, one per line.",
 )
 parser.add_argument(
+    "--input-folder",
+    action="store_true",
+    help=f"Process all images in the default input folder '{INPUT_FOLDER}'.",
+)
+
+parser.add_argument(
     "--input-path",
     type=str,
     help="Direct path to the input folder containing images."
