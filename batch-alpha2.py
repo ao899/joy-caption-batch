@@ -319,14 +319,32 @@ def main():
     quantization_config = BitsAndBytesConfig(
         load_in_8bit=True,
         llm_int8_threshold=6.0,
-        bnb_4bit_compute_dtype=torch.float32  # float16からfloat32に変更
+        bnb_4bit_compute_dtype=torch.float16  # Change back to float16
     )
     
     llava_model = LlavaForConditionalGeneration.from_pretrained(
         args.model,
         device_map="auto",
         quantization_config=quantization_config,
-        torch_dtype=torch.float32  # float16からfloat32に変更
+        torch_dtype=torch.float16  # Change back to float16
+    )
+
+    # Before generation, ensure consistent dtypes
+    pixel_values = pixel_values.to(dtype=torch.float16)
+    input_ids = input_ids.to(dtype=torch.long)  # Keep as long/int64
+    attention_mask = attention_mask.to(dtype=torch.long)  # Keep as long/int64
+    
+    generate_ids = llava_model.generate(
+        input_ids=input_ids,
+        pixel_values=pixel_values,
+        attention_mask=attention_mask,
+        max_new_tokens=args.max_new_tokens,
+        do_sample=not args.greedy,
+        suppress_tokens=None,
+        use_cache=True,
+        temperature=args.temperature,
+        top_k=args.top_k,
+        top_p=args.top_p,
     )
 
     assert isinstance(llava_model, LlavaForConditionalGeneration)
