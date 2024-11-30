@@ -450,30 +450,26 @@ def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]
 
     return input_ids[:i]
 
-
 def write_caption(image_path: Path, caption: str, args):
+    # 入力画像と同じフォルダにキャプションファイルを作成
     caption_path = image_path.with_suffix(".txt")
-
-    # Apply PREPEND_STRING and APPEND_STRING
+    
+    # 以下は既存のコード
     caption = f"{args.prepend_string}{caption}{args.append_string}"
-
-    # If PRINT_CAPTIONS is True, print the caption to console
+    
     if args.print_captions:
         print(f"Caption for '{image_path}': {caption}")
-
-    # Handle OVERWRITE option
+        
     if caption_path.exists():
         if args.overwrite:
-            mode = "w"  # Overwrite existing file
+            mode = "w"
         else:
             if args.print_captioning_status:
-                print(
-                    f"Caption file '{caption_path}' already exists and will not be overwritten."
-                )
+                print(f"Caption file '{caption_path}' already exists and will not be overwritten.")
             return
     else:
-        mode = "w"  # Create new file
-
+        mode = "w"
+        
     try:
         with open(caption_path, mode, encoding="utf-8") as f:
             f.write(caption)
@@ -481,6 +477,7 @@ def write_caption(image_path: Path, caption: str, args):
             print(f"Caption written to '{caption_path}'")
     except Exception as e:
         logging.error(f"Failed to write caption to '{caption_path}': {e}")
+
 
 
 class ImageDataset(Dataset):
