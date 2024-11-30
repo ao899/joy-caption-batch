@@ -493,6 +493,9 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx: int) -> dict:
         path = self.paths[idx]
 
+    # 既存のコードに追加
+    input_ids = input_ids.to(torch.int64)  # 明示的に型を指定
+    attention_mask = attention_mask.to(torch.int64)  # 明示的に型を指定
         # Pick a prompt
         prompt_str = random.choices(
             self.prompts, weights=[p.weight for p in self.prompts]
