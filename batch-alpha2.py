@@ -15,16 +15,17 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 from transformers import (
-AutoTokenizer,
-LlavaForConditionalGeneration,
-PreTrainedTokenizer,
-PreTrainedTokenizerFast,
-BitsAndBytesConfig
+    AutoTokenizer,
+    LlavaForConditionalGeneration,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+    BitsAndBytesConfig
 )
 
 
-
 def none_or_type(value, desired_type):
+
+
 if value == "None":
 return None
 return desired_type(value)
@@ -92,7 +93,8 @@ ONLY describe the most important elements of the image.
 
 # Configuration options
 PRINT_CAPTIONS = False  # Option to print captions to the console during inference
-PRINT_CAPTIONING_STATUS = False  # Option to print captioning file status to the console
+# Option to print captioning file status to the console
+PRINT_CAPTIONING_STATUS = False
 OVERWRITE = True  # Option to allow overwriting existing caption files
 PREPEND_STRING = ""  # Prefix string to prepend to the generated caption
 APPEND_STRING = ""  # Suffix string to append to the generated caption
@@ -100,168 +102,182 @@ APPEND_STRING = ""  # Suffix string to append to the generated caption
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
 INPUT_FOLDER = SCRIPT_DIR / "input"
-#OUTPUT_FOLDER = INPUT_FOLDER
+# OUTPUT_FOLDER = INPUT_FOLDER
 
 # LLM Settings
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
-TOP_K = 10  # Limits the sampling pool to the top K most likely options at each step.
+# Limits the sampling pool to the top K most likely options at each step.
+TOP_K = 10
 MAX_NEW_TOKENS = 300  # The maximum number of tokens to generate.
 BATCH_PROCESSING_COUNT = 1  # 24gb VRAM (Nvidia 3090) can handle batch 8.
 
 # Define supported image extensions
-SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
+SUPPORTED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+    ".gif",
+    ".tiff",
+    ".tif",
+    ".webp"}
 
 # Define default prompt file
 PROMPT_FILE = SCRIPT_DIR / "default_prompts.json"
 
-parser = argparse.ArgumentParser(description="Batch caption images using JoyCaption.")
+parser = argparse.ArgumentParser(
+    description="Batch caption images using JoyCaption.")
 
 # Image source arguments (all optional)
 parser.add_argument(
-"--glob",
-type=str,
-default=None,
-help="Glob pattern to find images (e.g., 'images/*.jpg').",
+    "--glob",
+    type=str,
+    default=None,
+    help="Glob pattern to find images (e.g., 'images/*.jpg').",
 )
 parser.add_argument(
-"--filelist",
-type=str,
-default=None,
-help="File containing list of image paths, one per line.",
+    "--filelist",
+    type=str,
+    default=None,
+    help="File containing list of image paths, one per line.",
 )
 parser.add_argument(
-"--input-folder",
-action="store_true",
-help=f"Process all images in the default input folder '{INPUT_FOLDER}'.",
+    "--input-folder",
+    action="store_true",
+    help=f"Process all images in the default input folder '{INPUT_FOLDER}'.",
 )
 
 parser.add_argument(
-"--input-path",
-type=str,
-help="Direct path to the input folder containing images."
+    "--input-path",
+    type=str,
+    help="Direct path to the input folder containing images."
 )
 
 
 # Prompt arguments (all optional)
+parser.add_argument("--prompt", type=str, default=PROMPT,
+                    help="Prompt to use for image captioning.")
 parser.add_argument(
-"--prompt", type=str, default=PROMPT, help="Prompt to use for image captioning."
-)
-parser.add_argument(
-"--prompt-file",
-type=str,
-default=None,
-help=f"JSON file containing prompts to use. Default: '{PROMPT_FILE}'.",
+    "--prompt-file",
+    type=str,
+    default=None,
+    help=f"JSON file containing prompts to use. Default: '{PROMPT_FILE}'.",
 )
 
 # New optional argument for image_seq_length
 parser.add_argument(
-"--image-seq-length",
-type=int,
-default=1,
-help="Number of image tokens to insert per image token in the prompt. Default is 1.",
+    "--image-seq-length",
+    type=int,
+    default=1,
+    help="Number of image tokens to insert per image token in the prompt. Default is 1.",
 )
 
 # Other optional parameters with default values
 parser.add_argument(
-"--batch-size",
-type=int,
-default=1,
-help="Batch size for processing images.",
+    "--batch-size",
+    type=int,
+    default=1,
+    help="Batch size for processing images.",
 )
 parser.add_argument(
-"--greedy", action="store_true", help="Use greedy decoding instead of sampling."
+    "--greedy",
+    action="store_true",
+    help="Use greedy decoding instead of sampling.")
+parser.add_argument(
+    "--temperature",
+    type=float,
+    default=TEMPERATURE,
+    help="Sampling temperature.",
 )
 parser.add_argument(
-"--temperature",
-type=float,
-default=TEMPERATURE,
-help="Sampling temperature.",
+    "--top-p",
+    type=lambda x: none_or_type(x, float),
+    default=0.9,
+    help="Top-p sampling.",
 )
 parser.add_argument(
-"--top-p",
-type=lambda x: none_or_type(x, float),
-default=0.9,
-help="Top-p sampling.",
+    "--top-k",
+    type=lambda x: none_or_type(x, int),
+    default=TOP_K,
+    help="Top-k sampling.",
 )
 parser.add_argument(
-"--top-k",
-type=lambda x: none_or_type(x, int),
-default=TOP_K,
-help="Top-k sampling.",
+    "--max-new-tokens",
+    type=int,
+    default=MAX_NEW_TOKENS,
+    help="Maximum length of the generated caption (in tokens).",
 )
 parser.add_argument(
-"--max-new-tokens",
-type=int,
-default=MAX_NEW_TOKENS,
-help="Maximum length of the generated caption (in tokens).",
+    "--num-workers",
+    type=int,
+    default=4,
+    help="Number of workers loading images in parallel.",
 )
 parser.add_argument(
-"--num-workers",
-type=int,
-default=4,
-help="Number of workers loading images in parallel.",
-)
-parser.add_argument(
-"--model",
-type=str,
-default="fancyfeast/llama-joycaption-alpha-two-hf-llava",
-help="Model to use.",
+    "--model",
+    type=str,
+    default="fancyfeast/llama-joycaption-alpha-two-hf-llava",
+    help="Model to use.",
 )
 
 # Additional optional parameters from configuration options
 parser.add_argument(
-"--print-captions",
-action="store_true",
-default=PRINT_CAPTIONS,
-help="Print captions to the console during inference.",
+    "--print-captions",
+    action="store_true",
+    default=PRINT_CAPTIONS,
+    help="Print captions to the console during inference.",
 )
 parser.add_argument(
-"--print-captioning-status",
-action="store_true",
-default=PRINT_CAPTIONING_STATUS,
-help="Print captioning file status to the console.",
+    "--print-captioning-status",
+    action="store_true",
+    default=PRINT_CAPTIONING_STATUS,
+    help="Print captioning file status to the console.",
 )
 parser.add_argument(
-"--overwrite",
-action="store_true",
-default=OVERWRITE,
-help="Allow overwriting existing caption files.",
+    "--overwrite",
+    action="store_true",
+    default=OVERWRITE,
+    help="Allow overwriting existing caption files.",
 )
 parser.add_argument(
-"--prepend-string",
-type=str,
-default=PREPEND_STRING,
-help="Prefix string to prepend to the generated caption.",
+    "--prepend-string",
+    type=str,
+    default=PREPEND_STRING,
+    help="Prefix string to prepend to the generated caption.",
 )
 parser.add_argument(
-"--append-string",
-type=str,
-default=APPEND_STRING,
-help="Suffix string to append to the generated caption.",
+    "--append-string",
+    type=str,
+    default=APPEND_STRING,
+    help="Suffix string to append to the generated caption.",
 )
 
 # Add a --batch-processing-count argument to specify batch processing count
 parser.add_argument(
-"--batch-processing-count",
-type=int,
-default=None,
-help="Batch processing count for processing images.",
+    "--batch-processing-count",
+    type=int,
+    default=None,
+    help="Batch processing count for processing images.",
 )
 
-PIL.Image.MAX_IMAGE_PIXELS = 933120000  # Suppress Pillow warnings on large images
+# Suppress Pillow warnings on large images
+PIL.Image.MAX_IMAGE_PIXELS = 933120000
 
 
 @dataclasses.dataclass
 class Prompt:
+
+
 prompt: str
 weight: float
 
 
 @torch.no_grad()
 def main():
-# Logging
+
+    # Logging
 logging.basicConfig(
-level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s"
+    level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s"
 )
 
 # Parse arguments
@@ -282,11 +298,11 @@ prompts = parse_prompts(args.prompt, args.prompt_file)
 
 # Find the images
 image_paths = find_images(
-args.glob,
-args.filelist,
-args.input_folder,
-use_default_input,
-args.input_path  # 新しい引数を追加
+    args.glob,
+    args.filelist,
+    args.input_folder,
+    use_default_input,
+    args.input_path  # 新しい引数を追加
 )
 
 
@@ -297,12 +313,12 @@ logging.info(f"Total images found: {len(image_paths)}")
 
 # Handle overwrite option
 if not args.overwrite:
-# Ignore all images that already have captions
+    # Ignore all images that already have captions
 image_paths = [
-path for path in image_paths if not Path(path).with_suffix(".txt").exists()
+    path for path in image_paths if not Path(path).with_suffix(".txt").exists()
 ]
 logging.info(
-f"Images to caption after filtering existing captions: {len(image_paths)}"
+    f"Images to caption after filtering existing captions: {len(image_paths)}"
 )
 if len(image_paths) == 0:
 logging.info("No new images to caption.")
@@ -313,20 +329,20 @@ logging.info("Overwrite option enabled; all images will be processed.")
 # Load JoyCaption
 tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=True)
 assert isinstance(tokenizer, PreTrainedTokenizer) or isinstance(
-tokenizer, PreTrainedTokenizerFast
+    tokenizer, PreTrainedTokenizerFast
 ), f"Tokenizer is of type {type(tokenizer)}"
 # モデルロード部分
 quantization_config = BitsAndBytesConfig(
-load_in_8bit=True,
-llm_int8_threshold=6.0,
-bnb_4bit_compute_dtype=torch.float32  # float16からfloat32に変更
+    load_in_8bit=True,
+    llm_int8_threshold=6.0,
+    bnb_4bit_compute_dtype=torch.float32  # float16からfloat32に変更
 )
 
 llava_model = LlavaForConditionalGeneration.from_pretrained(
-args.model,
-device_map="auto",
-quantization_config=quantization_config,
-torch_dtype=torch.float32  # float16からfloat32に変更
+    args.model,
+    device_map="auto",
+    quantization_config=quantization_config,
+    torch_dtype=torch.float32  # float16からfloat32に変更
 )
 assert isinstance(llava_model, LlavaForConditionalGeneration)
 
@@ -337,36 +353,36 @@ logging.debug(f"Image sequence length: {args.image_seq_length}")
 batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
 
 dataset = ImageDataset(
-prompts,
-image_paths,
-tokenizer,
-llava_model.config.image_token_index,
-args.image_seq_length,  # Use the provided image_seq_length
+    prompts,
+    image_paths,
+    tokenizer,
+    llava_model.config.image_token_index,
+    args.image_seq_length,  # Use the provided image_seq_length
 )
 dataloader = DataLoader(
-dataset,
-collate_fn=dataset.collate_fn,
-num_workers=args.num_workers,
-shuffle=False,
-drop_last=False,
-batch_size=batch_processing_count,
+    dataset,
+    collate_fn=dataset.collate_fn,
+    num_workers=args.num_workers,
+    shuffle=False,
+    drop_last=False,
+    batch_size=batch_processing_count,
 )
 end_of_header_id = tokenizer.convert_tokens_to_ids("<|end_header_id|>")
 end_of_turn_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
 assert isinstance(end_of_header_id, int) and isinstance(end_of_turn_id, int)
 
 pbar = tqdm(
-total=len(image_paths), desc="Captioning images...", dynamic_ncols=True
+    total=len(image_paths), desc="Captioning images...", dynamic_ncols=True
 )
 for batch in dataloader:
 vision_dtype = (
-llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.dtype
+    llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.dtype
 )
 vision_device = (
-llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.device
+    llava_model.vision_tower.vision_model.embeddings.patch_embedding.weight.device
 )
 language_device = (
-llava_model.language_model.get_input_embeddings().weight.device
+    llava_model.language_model.get_input_embeddings().weight.device
 )
 
 # Move to GPU
@@ -382,16 +398,16 @@ pixel_values = pixel_values.to(vision_dtype)
 # Generate the captions
 try:
 generate_ids = llava_model.generate(
-input_ids=input_ids,
-pixel_values=pixel_values,
-attention_mask=attention_mask,
-max_new_tokens=args.max_new_tokens,
-do_sample=not args.greedy,
-suppress_tokens=None,
-use_cache=True,
-temperature=args.temperature,
-top_k=args.top_k,
-top_p=args.top_p,
+    input_ids=input_ids,
+    pixel_values=pixel_values,
+    attention_mask=attention_mask,
+    max_new_tokens=args.max_new_tokens,
+    do_sample=not args.greedy,
+    suppress_tokens=None,
+    use_cache=True,
+    temperature=args.temperature,
+    top_k=args.top_k,
+    top_p=args.top_p,
 )
 except Exception as e:
 logging.error(f"Generation failed: {e}")
@@ -402,13 +418,13 @@ continue
 assert isinstance(generate_ids, torch.Tensor)
 generate_ids = generate_ids.tolist()
 generate_ids = [
-trim_off_prompt(ids, end_of_header_id, end_of_turn_id)
-for ids in generate_ids
+    trim_off_prompt(ids, end_of_header_id, end_of_turn_id)
+    for ids in generate_ids
 ]
 
 # Decode the captions
 captions = tokenizer.batch_decode(
-generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
+    generate_ids, skip_special_tokens=False, clean_up_tokenization_spaces=False
 )
 captions = [c.strip() for c in captions]
 
@@ -420,15 +436,19 @@ pbar.close()
 logging.info("Captioning completed.")
 
 
-def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]:
-# Trim off the prompt
+def trim_off_prompt(
+        input_ids: list[int],
+        eoh_id: int,
+        eot_id: int) -> list[int]:
+
+    # Trim off the prompt
 while True:
 try:
 i = input_ids.index(eoh_id)
 except ValueError:
 break
 
-input_ids = input_ids[i + 1 :]
+input_ids = input_ids[i + 1:]
 
 # Trim off the end
 try:
@@ -438,8 +458,10 @@ return input_ids
 
 return input_ids[:i]
 
+
 def write_caption(image_path: Path, caption: str, args):
-# 入力画像と同じディレクトリにキャプションファイルを生成するように修正
+
+    # 入力画像と同じディレクトリにキャプションファイルを生成するように修正
 output_dir = image_path.parent
 caption_path = output_dir / f"{image_path.stem}.txt"
 
@@ -454,7 +476,8 @@ print(f"Caption for '{image_path}': {caption}")
 if caption_path.exists():
 if not args.overwrite:
 if args.print_captioning_status:
-print(f"Caption file '{caption_path}' already exists and will not be overwritten.")
+print(
+    f"Caption file '{caption_path}' already exists and will not be overwritten.")
 return
 
 # キャプションファイルの書き込み
@@ -467,18 +490,19 @@ except Exception as e:
 logging.error(f"Failed to write caption to '{caption_path}': {e}")
 
 
-
-
-
 class ImageDataset(Dataset):
+
+
 def __init__(
-self,
-prompts: list[Prompt],
-paths: list[Path],
-tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
-image_token_id: int,
-image_seq_length: int,
+    self,
+    prompts: list[Prompt],
+    paths: list[Path],
+    tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+    image_token_id: int,
+    image_seq_length: int,
 ):
+
+
 self.prompts = prompts
 self.paths = paths
 self.tokenizer = tokenizer
@@ -486,10 +510,16 @@ self.image_token_id = image_token_id
 self.image_seq_length = image_seq_length
 self.pad_token_id = tokenizer.pad_token_id
 
+
 def __len__(self):
+
+
 return len(self.paths)
 
+
 def __getitem__(self, idx: int) -> dict:
+
+
 path = self.paths[idx]
 
 # 既存のコードに追加
@@ -497,7 +527,7 @@ input_ids = input_ids.to(torch.int64)  # 明示的に型を指定
 attention_mask = attention_mask.to(torch.int64)  # 明示的に型を指定
 # Pick a prompt
 prompt_str = random.choices(
-self.prompts, weights=[p.weight for p in self.prompts]
+    self.prompts, weights=[p.weight for p in self.prompts]
 )[0].prompt
 
 # Preprocess image
@@ -513,25 +543,25 @@ pixel_values = None  # Will be filtered out later
 
 # Build the conversation
 convo = [
-{
-"role": "system",
-"content": "You are a helpful image captioner.",
-},
-{
-"role": "user",
-"content": prompt_str,
-},
+    {
+        "role": "system",
+        "content": "You are a helpful image captioner.",
+    },
+    {
+        "role": "user",
+        "content": prompt_str,
+    },
 ]
 
 # Format the conversation
 convo_string = self.tokenizer.apply_chat_template(
-convo, tokenize=False, add_generation_prompt=True
+    convo, tokenize=False, add_generation_prompt=True
 )
 assert isinstance(convo_string, str)
 
 # Tokenize the conversation
 convo_tokens = self.tokenizer.encode(
-convo_string, add_special_tokens=False, truncation=False
+    convo_string, add_special_tokens=False, truncation=False
 )
 
 # Repeat the image tokens based on image_seq_length
@@ -546,38 +576,40 @@ input_ids = torch.tensor(input_tokens, dtype=torch.long)
 attention_mask = torch.ones_like(input_ids)
 
 return {
-"path": path,
-"pixel_values": pixel_values,
-"input_ids": input_ids,
-"attention_mask": attention_mask,
+    "path": path,
+    "pixel_values": pixel_values,
+    "input_ids": input_ids,
+    "attention_mask": attention_mask,
 }
 
+
 def collate_fn(self, batch: list[dict]) -> dict:
-# Filter out images that failed to load
+
+    # Filter out images that failed to load
 batch = [item for item in batch if item["pixel_values"] is not None]
 
 if not batch:
 return {
-"paths": [],
-"pixel_values": torch.empty(0),
-"input_ids": torch.empty(0),
-"attention_mask": torch.empty(0),
+    "paths": [],
+    "pixel_values": torch.empty(0),
+    "input_ids": torch.empty(0),
+    "attention_mask": torch.empty(0),
 }
 
 # Pad input_ids and attention_mask
 max_length = max(item["input_ids"].shape[0] for item in batch)
 n_pad = [max_length - item["input_ids"].shape[0] for item in batch]
 input_ids = torch.stack(
-[
-torch.nn.functional.pad(item["input_ids"], (n, 0), value=self.pad_token_id)
-for item, n in zip(batch, n_pad)
-]
+    [
+        torch.nn.functional.pad(item["input_ids"], (n, 0), value=self.pad_token_id)
+        for item, n in zip(batch, n_pad)
+    ]
 )
 attention_mask = torch.stack(
-[
-torch.nn.functional.pad(item["attention_mask"], (n, 0), value=0)
-for item, n in zip(batch, n_pad)
-]
+    [
+        torch.nn.functional.pad(item["attention_mask"], (n, 0), value=0)
+        for item, n in zip(batch, n_pad)
+    ]
 )
 
 # Stack pixel values
@@ -587,14 +619,18 @@ pixel_values = torch.stack([item["pixel_values"] for item in batch])
 paths = [item["path"] for item in batch]
 
 return {
-"paths": paths,
-"pixel_values": pixel_values,
-"input_ids": input_ids,
-"attention_mask": attention_mask,
+    "paths": paths,
+    "pixel_values": pixel_values,
+    "input_ids": input_ids,
+    "attention_mask": attention_mask,
 }
 
 
-def parse_prompts(prompt_str: str | None, prompt_file: str | None) -> list[Prompt]:
+def parse_prompts(
+        prompt_str: str | None,
+        prompt_file: str | None) -> list[Prompt]:
+
+
 prompts = []
 if prompt_str:
 prompts.append(Prompt(prompt=prompt_str, weight=1.0))
@@ -613,23 +649,23 @@ for item in data:
 if isinstance(item, str):
 prompts.append(Prompt(prompt=item, weight=1.0))
 elif (
-isinstance(item, dict)
-and "prompt" in item
-and "weight" in item
-and isinstance(item["prompt"], str)
-and isinstance(item["weight"], (int, float))
+    isinstance(item, dict)
+    and "prompt" in item
+    and "weight" in item
+    and isinstance(item["prompt"], str)
+    and isinstance(item["weight"], (int, float))
 ):
 prompts.append(
-Prompt(prompt=item["prompt"], weight=item["weight"])
+    Prompt(prompt=item["prompt"], weight=item["weight"])
 )
 else:
 raise ValueError(
-f"Invalid prompt in JSON file. Should be either a string or an object with 'prompt' and 'weight' fields: {item}"
+    f"Invalid prompt in JSON file. Should be either a string or an object with 'prompt' and 'weight' fields: {item}"
 )
 
 except json.JSONDecodeError as e:
 logging.error(
-f"Failed to parse JSON from prompt file '{prompt_file}': {e}"
+    f"Failed to parse JSON from prompt file '{prompt_file}': {e}"
 )
 except ValueError as ve:
 logging.error(str(ve))
@@ -640,7 +676,7 @@ prompts.append(Prompt(prompt=PROMPT, weight=1.0))
 
 if not prompts:
 raise ValueError(
-"No prompts available. Please provide a prompt via --prompt or --prompt-file."
+    "No prompts available. Please provide a prompt via --prompt or --prompt-file."
 )
 
 # Normalize weights
@@ -652,12 +688,14 @@ return prompts
 
 
 def find_images(
-glob: str | None,
-filelist: str | Path | None,
-input_folder_flag: bool,
-use_default_input: bool,
-input_path: str | None = None,  # 新しい引数を追加
+    glob: str | None,
+    filelist: str | Path | None,
+    input_folder_flag: bool,
+    use_default_input: bool,
+    input_path: str | None = None,  # 新しい引数を追加
 ) -> list[Path]:
+
+
 paths = []
 
 # input_pathの処理を最初に追加
@@ -669,8 +707,8 @@ elif not input_path_obj.is_dir():
 logging.error(f"Input path '{input_path}' is not a directory.")
 else:
 input_images = [
-p for p in input_path_obj.iterdir() 
-if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+    p for p in input_path_obj.iterdir()
+    if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 ]
 logging.info(f"Found {len(input_images)} images in '{input_path}'")
 paths.extend(input_images)
@@ -680,9 +718,10 @@ return paths  # input_pathが指定された場合は他の処理をスキップ
 if glob:
 glob_paths = list(Path(".").glob(glob))
 valid_glob_paths = [
-p for p in glob_paths if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+    p for p in glob_paths if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 ]
-logging.info(f"Found {len(valid_glob_paths)} images using glob pattern '{glob}'.")
+logging.info(
+    f"Found {len(valid_glob_paths)} images using glob pattern '{glob}'.")
 paths.extend(valid_glob_paths)
 
 if filelist:
@@ -691,15 +730,15 @@ if not filelist_path.exists():
 logging.error(f"File list '{filelist}' does not exist.")
 else:
 filelist_paths = [
-Path(line.strip())
-for line in filelist_path.read_text().strip().splitlines()
-if line.strip() != ""
+    Path(line.strip())
+    for line in filelist_path.read_text().strip().splitlines()
+    if line.strip() != ""
 ]
 valid_filelist_paths = [
-p for p in filelist_paths if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+    p for p in filelist_paths if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 ]
 logging.info(
-f"Found {len(valid_filelist_paths)} images using file list '{filelist}'."
+    f"Found {len(valid_filelist_paths)} images using file list '{filelist}'."
 )
 paths.extend(valid_filelist_paths)
 
@@ -710,15 +749,15 @@ elif not INPUT_FOLDER.is_dir():
 logging.error(f"Default input path '{INPUT_FOLDER}' is not a directory.")
 else:
 input_images = [
-p
-for p in INPUT_FOLDER.iterdir()
-if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+    p
+    for p in INPUT_FOLDER.iterdir()
+    if p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 ]
 if not input_images:
 logging.warning(f"No supported image files found in '{INPUT_FOLDER}'.")
 else:
 logging.info(
-f"Adding {len(input_images)} images from the default input folder '{INPUT_FOLDER}'."
+    f"Adding {len(input_images)} images from the default input folder '{INPUT_FOLDER}'."
 )
 paths.extend(input_images)
 
