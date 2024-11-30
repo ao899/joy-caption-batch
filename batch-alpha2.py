@@ -451,23 +451,24 @@ def trim_off_prompt(input_ids: list[int], eoh_id: int, eot_id: int) -> list[int]
     return input_ids[:i]
 
 def write_caption(image_path: Path, caption: str, args):
-    # 入力画像と同じディレクトリにキャプションファイルを生成
-    caption_path = image_path.with_suffix(".txt")
-    
+    # 入力画像と同じディレクトリにキャプションファイルを生成するように修正
+    output_dir = image_path.parent
+    caption_path = output_dir / f"{image_path.stem}.txt"
+
     # キャプションの前後に文字列を追加
     caption = f"{args.prepend_string}{caption}{args.append_string}"
-    
+
     # キャプション出力のオプション処理
     if args.print_captions:
         print(f"Caption for '{image_path}': {caption}")
-    
+
     # 上書きオプションの処理
     if caption_path.exists():
         if not args.overwrite:
             if args.print_captioning_status:
                 print(f"Caption file '{caption_path}' already exists and will not be overwritten.")
             return
-    
+
     # キャプションファイルの書き込み
     try:
         with open(caption_path, "w", encoding="utf-8") as f:
@@ -476,6 +477,7 @@ def write_caption(image_path: Path, caption: str, args):
             print(f"Caption written to '{caption_path}'")
     except Exception as e:
         logging.error(f"Failed to write caption to '{caption_path}': {e}")
+
 
 
 
