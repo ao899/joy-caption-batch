@@ -331,10 +331,10 @@ llava_model = LlavaForConditionalGeneration.from_pretrained(
 assert isinstance(llava_model, LlavaForConditionalGeneration)
 
     # Log image_seq_length for debugging
-    logging.debug(f"Image sequence length: {args.image_seq_length}")
+logging.debug(f"Image sequence length: {args.image_seq_length}")
 
     # Use args.batch_processing_count or BATCH_PROCESSING_COUNT
-    batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
+batch_processing_count = args.batch_processing_count or BATCH_PROCESSING_COUNT
 
     dataset = ImageDataset(
         prompts,
