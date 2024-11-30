@@ -113,8 +113,7 @@ APPEND_STRING = ""  # Suffix string to append to the generated caption
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
 INPUT_FOLDER = SCRIPT_DIR / "input"
-OUTPUT_FOLDER = Path(args.input_path) if args.input_path else INPUT_FOLDER
-OUTPUT_FOLDER = INPUT_FOLDER
+OUTPUT_FOLDER = INPUT_FOLDER  # デフォルト値として設定
 
 # LLM Settings
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
@@ -285,6 +284,40 @@ def main():
     # Determine if any image sources are provided
     image_sources_provided = any([args.glob, args.filelist, args.input_folder])
 
+    global OUTPUT_FOLDER
+    if args.input_path:
+        OUTPUT_FOLDER = Path(args.input_path)
+        def write_caption(image_path: Path, caption: str, args):
+    # OUTPUT_FOLDERを使用して出力パスを設定
+    caption_path = OUTPUT_FOLDER / image_path.name
+    caption_path = caption_path.with_suffix(".txt")
+    
+    # Apply PREPEND_STRING and APPEND_STRING
+    caption = f"{args.prepend_string}{caption}{args.append_string}"
+
+    # If PRINT_CAPTIONS is True, print the caption to console
+    if args.print_captions:
+        print(f"Caption for '{image_path}': {caption}")
+
+    # Handle OVERWRITE option
+    if caption_path.exists():
+        if args.overwrite:
+            mode = "w"  # Overwrite existing file
+        else:
+            if args.print_captioning_status:
+                print(f"Caption file '{caption_path}' already exists and will not be overwritten.")
+            return
+    else:
+        mode = "w"  # Create new file
+
+    try:
+        with open(caption_path, mode, encoding="utf-8") as f:
+            f.write(caption)
+        if args.print_captioning_status:
+            print(f"Caption written to '{caption_path}'")
+    except Exception as e:
+        logging.error(f"Failed to write caption to '{caption_path}': {e}")
+        
     # If no image sources are provided, default to using the input folder
     use_default_input = not image_sources_provided
 
