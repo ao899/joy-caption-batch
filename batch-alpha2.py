@@ -490,15 +490,12 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         path = self.paths[idx]
-
-        input_ids = input_ids.to(torch.int64)  # 明示的に型を指定
-        attention_mask = attention_mask.to(torch.int64)  # 明示的に型を指定
         
         # Pick a prompt
         prompt_str = random.choices(
             self.prompts, weights=[p.weight for p in self.prompts]
         )[0].prompt
-
+    
         # Preprocess image
         try:
             image = Image.open(path)
@@ -508,8 +505,8 @@ class ImageDataset(Dataset):
             pixel_values = TVF.pil_to_tensor(image)
         except Exception as e:
             logging.error(f"Failed to load image '{path}': {e}")
-            pixel_values = None  # Will be filtered out later
-
+            return None  # Will be filtered out later
+    
         # Build the conversation
         convo = [
             {
@@ -521,18 +518,17 @@ class ImageDataset(Dataset):
                 "content": prompt_str,
             },
         ]
-
+    
         # Format the conversation
         convo_string = self.tokenizer.apply_chat_template(
             convo, tokenize=False, add_generation_prompt=True
         )
-        assert isinstance(convo_string, str)
-
+        
         # Tokenize the conversation
         convo_tokens = self.tokenizer.encode(
             convo_string, add_special_tokens=False, truncation=False
         )
-
+    
         # Repeat the image tokens based on image_seq_length
         input_tokens = []
         for token in convo_tokens:
@@ -540,6 +536,18 @@ class ImageDataset(Dataset):
                 input_tokens.extend([self.image_token_id] * self.image_seq_length)
             else:
                 input_tokens.append(token)
+    
+        # Create input_ids and attention_mask tensors
+        input_ids = torch.tensor(input_tokens, dtype=torch.long)
+        attention_mask = torch.ones_like(input_ids)
+    
+        return {
+            "path": path,
+            "pixel_values": pixel_values,
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+        }
+
 
         input_ids = torch.tensor(input_tokens, dtype=torch.long)
         attention_mask = torch.ones_like(input_ids)
