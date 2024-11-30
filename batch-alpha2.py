@@ -129,8 +129,9 @@ parser.add_argument(
 parser.add_argument(
     "--input-path",
     type=str,
-    help="Direct path to the input folder containing images.",
+    help="Direct path to the input folder containing images."
 )
+
 
 # Prompt arguments (all optional)
 parser.add_argument(
@@ -272,8 +273,13 @@ def main():
 
     # Find the images
     image_paths = find_images(
-        args.glob, args.filelist, args.input_folder, use_default_input
+        args.glob,
+        args.filelist,
+        args.input_folder,
+        use_default_input,
+        args.input_path  # 新しい引数を追加
     )
+
 
     if len(image_paths) == 0:
         logging.warning(f"No images found in {image_paths}.")
@@ -630,11 +636,11 @@ def find_images(
     filelist: str | Path | None,
     input_folder_flag: bool,
     use_default_input: bool,
-    input_path: str | None,  # 新しいパラメータ
+    input_path: str | None = None,  # 新しい引数を追加
 ) -> list[Path]:
     paths = []
     
-    # 直接パスが指定された場合の処理を追加
+    # input_pathの処理を最初に追加
     if input_path:
         input_path_obj = Path(input_path)
         if not input_path_obj.exists():
@@ -648,6 +654,8 @@ def find_images(
             ]
             logging.info(f"Found {len(input_images)} images in '{input_path}'")
             paths.extend(input_images)
+            return paths  # input_pathが指定された場合は他の処理をスキップ
+
 
     if glob:
         glob_paths = list(Path(".").glob(glob))
