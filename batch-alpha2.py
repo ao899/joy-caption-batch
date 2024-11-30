@@ -113,8 +113,7 @@ APPEND_STRING = ""  # Suffix string to append to the generated caption
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
 INPUT_FOLDER = SCRIPT_DIR / "input"
-OUTPUT_FOLDER = input-path
-
+OUTPUT_FOLDER = INPUT_FOLDER
 
 # LLM Settings
 TEMPERATURE = 0.5  # Controls the randomness of predictions.
