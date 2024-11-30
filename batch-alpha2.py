@@ -13,6 +13,8 @@ import torchvision.transforms.functional as TVF
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
+
+
 from transformers import (
     AutoTokenizer,
     LlavaForConditionalGeneration,
@@ -20,6 +22,19 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
+# モデルロード部分を修正
+from transformers import BitsAndBytesConfig
+
+quantization_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+    llm_int8_threshold=6.0
+)
+
+llava_model = LlavaForConditionalGeneration.from_pretrained(
+    args.model,
+    device_map="auto",
+    quantization_config=quantization_config
+)
 
 def none_or_type(value, desired_type):
     if value == "None":
