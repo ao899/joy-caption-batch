@@ -113,6 +113,7 @@ APPEND_STRING = ""  # Suffix string to append to the generated caption
 # Specify input and output folder paths
 SCRIPT_DIR = Path(__file__).parent
 INPUT_FOLDER = SCRIPT_DIR / "input"
+OUTPUT_FOLDER = Path(args.input_path) if args.input_path else INPUT_FOLDER
 OUTPUT_FOLDER = INPUT_FOLDER
 
 # LLM Settings
